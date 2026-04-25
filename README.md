@@ -1,19 +1,22 @@
-# ❄️ Eve 1.0 — AI Chat Interface
+# ❄️ Eve 1.0 — Premium AI Research Assistant
 
 > A premium, minimalist AI chat application powered by **Google Gemini 1.5 Flash** and built with **Next.js 16**.  
-> Featuring a stunning animated Vortex canvas background, glassmorphism UI, and multi-modal file analysis.
+> Featuring a stunning animated Vortex canvas background, glassmorphism UI, voice interaction, and multi-modal file analysis.
 
 ---
 
 ## ✨ Features
 
 - 🧠 **Google Gemini 1.5 Flash** — Ultra-fast, intelligent AI responses via the official Google Generative AI SDK
-- 🌀 **Vortex Canvas Background** — High-performance, interactive simplex-noise particle animation
+- 🌀 **Vortex Canvas Background** — High-performance, interactive 3D simplex-noise particle animation
 - 🪟 **Full Glassmorphism UI** — Premium frosted glass containers, buttons, and chat bubbles
+- 💡 **Spotlight Interactive Elements** — Integrated ReactBits spotlight glow effects tracking your cursor
 - 📎 **Multi-Modal File Upload** — Upload images (JPG, PNG, WebP, GIF), PDFs, and text files for Eve to analyze
+- 🌐 **Webpage Reading** — Eve can natively scrape and read URLs provided in the chat via Jina AI
+- 🎙️ **Voice Interaction** — Web Speech API integration for wake-word detection ("Hey Eve") and voice synthesis
+- 🗄️ **Persistent Chat History** — Seamless local storage implementation keeping track of your past conversations
 - 🎨 **Pure Monochrome Aesthetic** — Strict black, white, and zinc/gray color palette — no color noise
-- ❄️ **Eve Branding** — Custom Snowflake identity used consistently across the header and chat
-- 📱 **Mobile Optimized** — `h-[100dvh]` layout works correctly on iOS Safari and mobile Chrome
+- 📱 **Mobile Optimized** — Responsive fluid layouts and precise `h-[100dvh]` handling for mobile browsers
 - 🔒 **Privacy-First Architecture** — All API calls routed through Next.js server-side; API key never exposed to client
 
 ---
@@ -58,23 +61,30 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 ```
 src/
 ├── app/
-│   ├── api/chat/route.ts      # Secure server-side Gemini API proxy
-│   ├── page.tsx               # Main page with header & layout
+│   ├── api/
+│   │   ├── chat/route.ts      # Secure server-side Gemini API proxy
+│   │   └── tts/route.ts       # Text-to-speech API handler
+│   ├── page.tsx               # Main page with layout and background
 │   ├── layout.tsx             # Root layout & metadata
 │   └── globals.css            # Design tokens & glassmorphism utilities
 ├── components/
-│   ├── AnimatedBackground.tsx # Vortex canvas particle animation
-│   └── chat/
-│       ├── ChatContainer.tsx  # Core chat logic & state
-│       ├── ChatInput.tsx      # Input bar with file upload
-│       └── ChatMessage.tsx    # Message bubbles with attachment rendering
+│   ├── AnimatedBackground.tsx # 3D Vortex canvas particle animation
+│   ├── chat/
+│   │   ├── ChatContainer.tsx  # Core chat logic & state layout
+│   │   ├── ChatInput.tsx      # Input bar with file upload
+│   │   ├── ChatMessage.tsx    # Message bubbles with markdown rendering
+│   │   └── HistorySidebar.tsx # Sidebar for past sessions management
+│   └── reactbits/
+│       └── SpotlightCard.tsx  # Mouse-tracking glow components
 ├── hooks/
 │   ├── useVoice.ts            # Web Speech API wake-word detection hook
-│   └── useSpeech.ts          # Text-to-speech hook
+│   └── useMouse.ts            # Mouse tracking hook for Spotlight
 ├── lib/
-│   └── gemini.ts             # Google Gemini AI service layer
+│   ├── gemini.ts              # Google Gemini AI service layer
+│   ├── chatStorage.ts         # LocalStorage history database
+│   └── readWebpage.ts         # Jina Reader web scraping utility
 └── types/
-    └── chat.ts               # TypeScript types (Message, Attachment, etc.)
+    └── chat.ts                # TypeScript interfaces
 ```
 
 ---
@@ -88,7 +98,7 @@ src/
 | **`@google/generative-ai`** | Gemini 1.5 Flash SDK |
 | **`framer-motion`** | UI animations |
 | **`simplex-noise`** | Vortex background math |
-| **`lucide-react`** | Icons (Snowflake, etc.) |
+| **`lucide-react`** | Icons (Snowflake, Menu, etc.) |
 | **`react-markdown`** | Renders Eve's markdown responses |
 
 ---

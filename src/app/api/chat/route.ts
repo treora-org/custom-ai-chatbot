@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { generateChatResponse } from "@/lib/gemini";
+import { generateChatResponse } from "@/lib/ai_model";
 import { Message } from "@/types/chat";
 
 // App Router route segment config for large file upload payloads
@@ -14,9 +14,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid messages format" }, { status: 400 });
     }
 
-    const replyText = await generateChatResponse(messages);
+    const { reply, sources } = await generateChatResponse(messages);
 
-    return NextResponse.json({ reply: replyText });
+    return NextResponse.json({ reply, sources });
   } catch (error: any) {
     console.error("Chat API Error:", error.message || error);
     return NextResponse.json(
