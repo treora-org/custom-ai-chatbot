@@ -52,7 +52,7 @@ export async function generateChatResponse(messages: Message[]): Promise<{ reply
 
   const sources: Source[] = [];
   let iterations = 0;
-  const maxIterations = 4;
+  const maxIterations = 2; // Kept low for Vercel free-tier 10s timeout
 
   while (iterations < maxIterations) {
     iterations++;
@@ -62,7 +62,7 @@ export async function generateChatResponse(messages: Message[]): Promise<{ reply
       completion = await groq.chat.completions.create({
         model: "llama-3.1-8b-instant",
         messages: groqMessages,
-        max_tokens: 1024,
+        max_tokens: 768,
         temperature: 0.7,
         tools: tools as any,
         tool_choice: "auto",
@@ -125,7 +125,7 @@ export async function generateChatResponse(messages: Message[]): Promise<{ reply
     const finalCompletion = await groq.chat.completions.create({
       model: "llama-3.1-8b-instant",
       messages: groqMessages.filter(m => m.role !== "tool" && !m.tool_calls), // Strip tool stuff to ensure safe fallback
-      max_tokens: 1024,
+      max_tokens: 768,
     });
     return {
       reply: finalCompletion.choices[0]?.message?.content ?? "I encountered an error while researching. Could you rephrase your question?",

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import Groq from "groq-sdk";
 
-export const maxDuration = 30;
+export const maxDuration = 9; // Vercel Hobby free-tier limit is 10s
 
 export async function POST(req: Request) {
   try {
