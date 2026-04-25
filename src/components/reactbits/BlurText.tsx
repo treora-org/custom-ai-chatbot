@@ -74,7 +74,7 @@ export function BlurText({
         }
         : defaultFrom,
       delay: i * delay,
-      config: { easing: (t) => t },
+      config: { easing: (t: number) => t },
     }))
   );
 
