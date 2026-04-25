@@ -3,7 +3,7 @@ import { generateChatResponse } from "@/lib/ai_model";
 import { Message } from "@/types/chat";
 
 // App Router route segment config for large file upload payloads
-export const maxDuration = 30;
+export const maxDuration = 9; // Vercel Hobby free-tier limit is 10s
 
 export async function POST(req: Request) {
   try {

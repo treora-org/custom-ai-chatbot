@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-export const maxDuration = 30;
+export const maxDuration = 9; // Vercel Hobby free-tier limit is 10s
 
 // Default to Rachel — calm, clear female voice
 // Full list: https://api.elevenlabs.io/v1/voices
