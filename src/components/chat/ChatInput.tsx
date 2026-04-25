@@ -1,23 +1,14 @@
 import { useState, KeyboardEvent, useRef, useEffect, ChangeEvent } from "react";
 import { SendHorizonal, Loader2, Paperclip, X, FileText, Image as ImageIcon } from "lucide-react";
-import { Mic, MicOff } from "lucide-react";
 import { Attachment } from "@/types/chat";
+import { SpotlightCard } from "@/components/reactbits/SpotlightCard";
 
 interface ChatInputProps {
   onSendMessage: (message: string, attachments?: Attachment[]) => void;
   isLoading: boolean;
-  isVoiceSupported?: boolean;
-  voiceActive?: boolean;
-  onToggleVoice?: () => void;
 }
 
-export function ChatInput({ 
-  onSendMessage, 
-  isLoading,
-  isVoiceSupported,
-  voiceActive,
-  onToggleVoice
-}: ChatInputProps) {
+export function ChatInput({ onSendMessage, isLoading }: ChatInputProps) {
   const [input, setInput] = useState("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -47,7 +38,7 @@ export function ChatInput({
     if (!files) return;
 
     const newAttachments: Attachment[] = [];
-    
+
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       if (file.size > 20 * 1024 * 1024) {
@@ -60,7 +51,7 @@ export function ChatInput({
       const supportedDocTypes = ["application/pdf", "text/plain", "text/markdown"];
       const isImage = file.type.startsWith("image/");
       const isDoc = supportedDocTypes.includes(file.type);
-      
+
       if (isImage && !supportedImageTypes.includes(file.type)) {
         alert(`${file.name}: Format not supported. Please use JPG, PNG, WebP, or GIF.\n\nHEIC (iPhone photos) are not supported by the AI model.`);
         continue;
@@ -83,7 +74,7 @@ export function ChatInput({
         reader.onerror = reject;
       });
       reader.readAsDataURL(file);
-      
+
       try {
         const att = await promise;
         newAttachments.push(att);
@@ -115,8 +106,8 @@ export function ChatInput({
       {attachments.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-3 ml-2">
           {attachments.map((file, index) => (
-            <div 
-              key={index} 
+            <div
+              key={index}
               className="group relative flex items-center gap-2 bg-white/5 backdrop-blur-md border border-white/10 rounded-xl px-3 py-2 pr-8 animate-in fade-in slide-in-from-bottom-2 duration-300"
             >
               {file.mimeType.startsWith("image/") ? (
@@ -136,49 +127,51 @@ export function ChatInput({
         </div>
       )}
 
-      <div className="relative flex items-end w-full glass-panel rounded-3xl p-2 border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.5)]">
-        <input 
-          type="file" 
-          ref={fileInputRef} 
-          onChange={handleFileChange} 
-          multiple 
-          hidden 
-          accept="image/jpeg,image/png,image/webp,image/gif,.pdf,.txt,.md,.js,.ts,.py,.json,.csv"
-        />
-        
-        <button
-          onClick={handleFileClick}
-          className="flex-shrink-0 p-3 mb-1 ml-1 rounded-2xl text-zinc-500 hover:text-zinc-200 transition-colors"
-          title="Attach files (Images, PDFs, Text)"
-        >
-          <Paperclip size={20} />
-        </button>
-
-        <textarea
-          ref={textareaRef}
-          className="w-full bg-transparent text-[#E2E8F0] placeholder-zinc-500 resize-none outline-none py-3 px-4 max-h-[200px] min-h-[52px] scrollbar-hide text-base leading-relaxed"
-          placeholder="Message Eve..."
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          disabled={isLoading}
-          rows={1}
-        />
-
-        <div className="flex items-center">
+      <SpotlightCard className="relative w-full rounded-[2rem] bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl p-1.5 transition-all">
+        <div className="flex flex-row items-end w-full relative z-10">
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleFileChange} 
+            multiple 
+            hidden 
+            accept="image/jpeg,image/png,image/webp,image/gif,.pdf,.txt,.md,.js,.ts,.py,.json,.csv"
+          />
+          
           <button
-            onClick={handleSend}
-            disabled={(!input.trim() && attachments.length === 0) || isLoading}
-            className={`flex-shrink-0 p-3 mb-1 ml-1 mr-1 rounded-2xl transition-all duration-300 ${
-              (input.trim() || attachments.length > 0) && !isLoading
-                ? "bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 shadow-[0_0_15px_rgba(255,255,255,0.1)]"
-                : "bg-white/5 text-zinc-600 border border-transparent cursor-not-allowed"
-            }`}
+            onClick={handleFileClick}
+            className="flex-shrink-0 p-2 ml-1 rounded-full text-zinc-500 hover:text-zinc-200 transition-colors h-[36px] w-[36px] flex items-center justify-center"
+            title="Attach files (Images, PDFs, Text)"
           >
-            {isLoading ? <Loader2 size={20} className="animate-spin text-zinc-300" /> : <SendHorizonal size={20} />}
+            <Paperclip size={20} />
           </button>
+
+          <textarea
+            ref={textareaRef}
+            className="w-full bg-transparent text-[#E2E8F0] placeholder-zinc-500 resize-none outline-none py-1.5 px-3 max-h-[200px] min-h-[36px] scrollbar-hide text-base leading-relaxed flex-1 self-center"
+            placeholder="Message Eve..."
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            disabled={isLoading}
+            rows={1}
+          />
+
+          <div className="flex items-center gap-1">
+            {/* Send button */}
+            <button
+              onClick={handleSend}
+              disabled={(!input.trim() && attachments.length === 0) || isLoading}
+              className={`flex-shrink-0 p-2 mr-1 rounded-full transition-all duration-300 z-10 relative h-[36px] w-[36px] flex items-center justify-center ${(input.trim() || attachments.length > 0) && !isLoading
+                  ? "bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 shadow-[0_0_15px_rgba(255,255,255,0.1)]"
+                  : "bg-transparent text-zinc-600 border border-transparent cursor-not-allowed"
+                }`}
+            >
+              {isLoading ? <Loader2 size={20} className="animate-spin text-zinc-300" /> : <SendHorizonal size={20} />}
+            </button>
+          </div>
         </div>
-      </div>
+      </SpotlightCard>
       <div className="text-center mt-3 text-xs text-zinc-600">
         Eve can see images and read documents. Max 20MB per file.
       </div>

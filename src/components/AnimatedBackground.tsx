@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { createNoise3D } from "simplex-noise";
 
 export function AnimatedBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -9,28 +8,34 @@ export function AnimatedBackground() {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
     let width: number;
     let height: number;
-    let cx: number;
-    let cy: number;
+    let animId: number;
 
-    const noise3D = createNoise3D();
+    // 3D Sphere Hologram Data
+    const numPoints = 800;
+    let sphereRadius = 300; 
+    const points: { x: number; y: number; z: number }[] = [];
 
-    let particles: any[] = [];
-    let tick = 0;
+    // Fibonacci sphere distribution for perfectly even points on the globe
+    const phi = Math.PI * (3 - Math.sqrt(5)); 
+    for (let i = 0; i < numPoints; i++) {
+      const y = 1 - (i / (numPoints - 1)) * 2; 
+      const radiusAtY = Math.sqrt(1 - y * y); 
+      const theta = phi * i; 
 
-    // Configurable parameters for the "Vortex"
-    const particleCount = 700;
-    const baseSpeed = 0.05;
-    const rangeSpeed = 0.15;
-    const baseRadius = 1;
-    const rangeRadius = 2;
-    const baseHue = 220; // Blue/Zinc scheme
-    const rangeHue = 20;
+      const x = Math.cos(theta) * radiusAtY;
+      const z = Math.sin(theta) * radiusAtY;
+
+      // Store normalized coordinates (we will multiply by radius in the draw loop so it resizes well)
+      points.push({ x, y, z });
+    }
+
+    let rotationX = 0;
+    let rotationY = 0;
 
     function resize() {
       if (!canvas) return;
@@ -38,103 +43,111 @@ export function AnimatedBackground() {
       height = window.innerHeight;
       canvas.width = width;
       canvas.height = height;
-      cx = width / 2;
-      cy = height / 2;
-      initParticles();
-    }
-
-    function initParticles() {
-      particles = [];
-      for (let i = 0; i < particleCount; i++) {
-        particles.push(resetParticle({} as any));
-      }
-    }
-
-    function resetParticle(p: any) {
-      p.x = Math.random() * width;
-      p.y = Math.random() * height;
-      p.vx = 0;
-      p.vy = 0;
-      p.radius = baseRadius + Math.random() * rangeRadius;
-      p.speed = baseSpeed + Math.random() * rangeSpeed;
-      p.hue = Math.floor(Math.random() * rangeHue) + baseHue;
-      p.life = Math.random() * 200 + 50;
-      p.tick = 0;
-      return p;
+      
+      // Adjust sphere size based on screen width for mobile responsiveness
+      sphereRadius = Math.min(width, height) * 0.4;
     }
 
     function draw() {
       if (!ctx) return;
 
-      // Dark fade for trail effect (slightly higher alpha for softer trails)
-      ctx.fillStyle = "rgba(0, 0, 0, 0.08)";
+      // Clear background
+      ctx.fillStyle = "#000000";
       ctx.fillRect(0, 0, width, height);
 
-      for (let i = 0; i < particles.length; i++) {
-        const p = particles[i];
-        p.tick++;
+      const centerX = width / 2;
+      const centerY = height / 2;
 
-        // Noise flow field logic
-        // x and y scaled down to make the swirls larger
-        const n = noise3D(p.x * 0.0015, p.y * 0.0015, tick * 0.0003);
+      // Smooth rotation
+      rotationX += 0.001;
+      rotationY += 0.002;
+
+      const cosX = Math.cos(rotationX);
+      const sinX = Math.sin(rotationX);
+      const cosY = Math.cos(rotationY);
+      const sinY = Math.sin(rotationY);
+
+      // --- Draw Sci-Fi HUD Rings ---
+      ctx.lineWidth = 1;
+      
+      // Inner solid ring
+      ctx.strokeStyle = "rgba(150, 150, 150, 0.15)";
+      ctx.beginPath();
+      ctx.ellipse(centerX, centerY, sphereRadius + 20, (sphereRadius + 20) * 0.3, rotationY, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Outer dashed spinning ring
+      ctx.strokeStyle = "rgba(200, 200, 200, 0.25)";
+      ctx.beginPath();
+      ctx.setLineDash([10, 20, 5, 15]);
+      ctx.ellipse(centerX, centerY, sphereRadius + 50, (sphereRadius + 50) * 0.3, -rotationX * 2, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]); // reset
+
+      // --- Draw 3D Sphere Points ---
+      for (let i = 0; i < numPoints; i++) {
+        const p = points[i];
         
-        // Convert noise value (-1 to 1) to an angle
-        const angle = n * Math.PI * 4;
+        // Scale normalized points
+        const px = p.x * sphereRadius;
+        const py = p.y * sphereRadius;
+        const pz = p.z * sphereRadius;
 
-        // Swirl offset towards the center to create a vortex
-        const dx = p.x - cx;
-        const dy = p.y - cy;
-        const dist = Math.sqrt(dx * dx + dy * dy);
+        // 3D Rotation Math
+        const y1 = py * cosX - pz * sinX;
+        const z1 = py * sinX + pz * cosX;
+        const x2 = px * cosY + z1 * sinY;
+        const z2 = -px * sinY + z1 * cosY;
+        const y2 = y1;
+
+        // Perspective Projection
+        const distance = 1000; 
+        const zPerspective = distance / (distance - z2);
+        const xProjected = centerX + x2 * zPerspective;
+        const yProjected = centerY + y2 * zPerspective;
+
+        if (zPerspective < 0) continue; // Behind camera
+
+        // Depth fading (back of the sphere is darker and smaller)
+        // z2 ranges from -sphereRadius (front) to +sphereRadius (back)
+        const depthRatio = (z2 + sphereRadius) / (sphereRadius * 2); 
         
-        // Combine flow field angle with a pull towards the center
-        const vortexAngle = Math.atan2(dy, dx) + Math.PI / 2; 
-        const pull = Math.max(0, 1 - dist / (width / 1.5));
+        // Holographic styling
+        const opacity = Math.max(0.05, 1 - depthRatio * 0.95);
+        const radius = Math.max(0.5, (1 - depthRatio) * 2.5);
 
-        // Update velocity
-        p.vx += Math.cos(angle) * 0.2 + Math.cos(vortexAngle) * pull * 0.2;
-        p.vy += Math.sin(angle) * 0.2 + Math.sin(vortexAngle) * pull * 0.2;
-
-        // Apply friction
-        p.vx *= 0.95;
-        p.vy *= 0.95;
-
-        // Update position
-        p.x += p.vx * p.speed;
-        p.y += p.vy * p.speed;
-
-        // Reset if it goes out of bounds or life ends
-        if (
-          p.x < 0 ||
-          p.x > width ||
-          p.y < 0 ||
-          p.y > height ||
-          p.tick > p.life
-        ) {
-          resetParticle(p);
-        }
-
-        // Draw particle
+        ctx.fillStyle = `rgba(230, 230, 230, ${opacity})`;
         ctx.beginPath();
-        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-        // Subtle glow using pure white to zinc tones for Eve's color scheme
-        const opacity = Math.sin((p.tick / p.life) * Math.PI);
-        // Monochromatic / grayish-blue to match Eve theme
-        ctx.fillStyle = `hsla(${p.hue}, 20%, 80%, ${opacity * 0.8})`;
+        ctx.arc(xProjected, yProjected, radius, 0, Math.PI * 2);
         ctx.fill();
-        ctx.closePath();
+
+        // Draw connecting lines occasionally to form a "wireframe" network
+        if (i % 20 === 0) {
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.lineTo(xProjected, yProjected);
+            ctx.strokeStyle = `rgba(100, 100, 100, ${opacity * 0.1})`;
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+        }
       }
 
-      tick++;
-      requestAnimationFrame(draw);
+      // --- Subtle Scanline Overlay ---
+      ctx.fillStyle = "rgba(255, 255, 255, 0.015)";
+      for (let i = 0; i < height; i += 4) {
+        ctx.fillRect(0, i, width, 1);
+      }
+
+      animId = requestAnimationFrame(draw);
     }
 
-    // Initialize
     window.addEventListener("resize", resize);
     resize();
-    requestAnimationFrame(draw);
+    draw();
 
     return () => {
       window.removeEventListener("resize", resize);
+      cancelAnimationFrame(animId);
     };
   }, []);
 
@@ -142,11 +155,10 @@ export function AnimatedBackground() {
     <div className="absolute inset-0 w-full h-full bg-black overflow-hidden pointer-events-none z-0">
       <canvas
         ref={canvasRef}
-        className="block w-full h-full"
-        style={{ opacity: 0.8 }}
+        className="block w-full h-full mix-blend-screen opacity-60"
       />
-      {/* Vignette mask to fade the edges to black like a premium UI */}
-      <div className="absolute inset-0 z-10 pointer-events-none bg-[radial-gradient(ellipse_100%_100%_at_50%_50%,transparent_20%,#000_100%)]"></div>
+      {/* Heavy vignette to keep focus on the center UI and give depth */}
+      <div className="absolute inset-0 z-10 pointer-events-none bg-[radial-gradient(ellipse_100%_100%_at_50%_50%,transparent_30%,#000_100%)]"></div>
     </div>
   );
 }

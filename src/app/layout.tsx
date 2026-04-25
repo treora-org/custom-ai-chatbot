@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Eve 1.0",
-  description: "A premium local AI chat interface powered by Ollama",
+  description: "A premium local AI chat interface",
 };
 
 export default function RootLayout({

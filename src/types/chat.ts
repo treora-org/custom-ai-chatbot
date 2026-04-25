@@ -6,10 +6,16 @@ export interface Attachment {
   data: string; // base64
 }
 
+export interface Source {
+  url: string;
+  title: string;
+}
+
 export interface Message {
   role: Role;
   content: string;
   attachments?: Attachment[];
+  sources?: Source[];
 }
 
 export interface ChatRequest {
@@ -20,5 +26,6 @@ export interface ChatRequest {
 
 export interface ChatResponse {
   reply: string;
+  sources?: Source[];
 }
 
