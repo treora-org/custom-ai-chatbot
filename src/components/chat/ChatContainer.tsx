@@ -6,12 +6,13 @@ import { ChatMessage } from "./ChatMessage";
 import { ChatInput } from "./ChatInput";
 import { HistorySidebar } from "./HistorySidebar";
 import { AnimatePresence, motion } from "framer-motion";
-import { Snowflake, Menu, Plus, Globe, FileText, Search } from "lucide-react";
+import { Snowflake, Menu, LogOut, ChevronDown } from "lucide-react";
 import { useVoice } from "@/hooks/useVoice";
 import { useSpeech } from "@/hooks/useSpeech";
+import { useAuth } from "@/hooks/useAuth";
 import {
   createSession, saveSession, loadSession, deleteSession,
-  getIndex, syncFromCloud, ChatSession, SessionMeta,
+  getIndex, syncFromCloud, setActiveUserId, ChatSession, SessionMeta,
 } from "@/lib/chatStorage";
 
 export function ChatContainer() {
@@ -20,15 +21,18 @@ export function ChatContainer() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sessions, setSessions] = useState<SessionMeta[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const { speak, stop: stopSpeaking, isSpeaking } = useSpeech();
+  const { user, signOut } = useAuth();
 
-  // Load session index on mount + sync from cloud
+  // Set active user for per-user storage and load sessions
   useEffect(() => {
+    if (user?.id) setActiveUserId(user.id);
     getIndex().then(setSessions);
     syncFromCloud().then(() => getIndex().then(setSessions));
-  }, []);
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-scroll
   useEffect(() => {
@@ -165,9 +169,41 @@ export function ChatContainer() {
       </div>
 
       <div className="fixed top-4 right-4 z-20">
-        <div className="flex items-center gap-2 bg-white/5 backdrop-blur-xl border border-white/10 px-4 py-2.5 rounded-full shadow-lg">
-          <Snowflake size={18} className="text-zinc-200" />
-          <span className="font-semibold text-sm tracking-wide text-white">Eve 1.0</span>
+        <div className="relative">
+          <button
+            onClick={() => setUserMenuOpen((o) => !o)}
+            className="flex items-center gap-2 bg-white/5 backdrop-blur-xl border border-white/10 px-3 py-2 rounded-full shadow-lg hover:bg-white/10 transition-all"
+          >
+            <Snowflake size={16} className="text-zinc-300" />
+            <span className="text-sm font-medium text-white max-w-[120px] truncate">
+              {user?.user_metadata?.full_name || "Eve 1.0"}
+            </span>
+            <ChevronDown size={14} className={`text-zinc-400 transition-transform ${userMenuOpen ? "rotate-180" : ""}`} />
+          </button>
+
+          <AnimatePresence>
+            {userMenuOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                transition={{ duration: 0.15 }}
+                className="absolute right-0 top-full mt-2 w-52 bg-zinc-950/90 backdrop-blur-2xl border border-white/10 rounded-xl shadow-xl overflow-hidden"
+              >
+                <div className="px-4 py-3 border-b border-white/5">
+                  <p className="text-xs font-medium text-white truncate">{user?.user_metadata?.full_name || "User"}</p>
+                  <p className="text-xs text-zinc-500 truncate mt-0.5">{user?.email}</p>
+                </div>
+                <button
+                  onClick={async () => { setUserMenuOpen(false); await signOut(); window.location.href = "/"; }}
+                  className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
+                >
+                  <LogOut size={14} />
+                  Sign out
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 

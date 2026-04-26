@@ -33,16 +33,23 @@ function toMeta(s: ChatSession): SessionMeta {
   return { id: s.id, title: s.title, createdAt: s.createdAt, updatedAt: s.updatedAt, messageCount: s.messages.length };
 }
 
-// ── localStorage cache helpers (for instant reads + offline) ──
+// ── localStorage (namespaced per user) ───────────────────────
 
-const LS_INDEX = "eve_sessions_index";
-const lsKey = (id: string) => `eve_session_${id}`;
+let _activeUserId: string | null = null;
+
+/** Call this once when the authenticated user is known. */
+export function setActiveUserId(id: string | null) {
+  _activeUserId = id;
+}
+
+const LS_INDEX = () => _activeUserId ? `eve_sessions_index_${_activeUserId}` : "eve_sessions_index_anon";
+const lsKey = (id: string) => `eve_session_${_activeUserId ?? "anon"}_${id}`;
 
 function lsGetIndex(): SessionMeta[] {
-  try { return JSON.parse(localStorage.getItem(LS_INDEX) || "[]"); } catch { return []; }
+  try { return JSON.parse(localStorage.getItem(LS_INDEX()) || "[]"); } catch { return []; }
 }
 function lsSetIndex(index: SessionMeta[]) {
-  localStorage.setItem(LS_INDEX, JSON.stringify(index));
+  localStorage.setItem(LS_INDEX(), JSON.stringify(index));
 }
 function lsCacheSession(session: ChatSession) {
   try { localStorage.setItem(lsKey(session.id), JSON.stringify(session)); } catch {}
@@ -64,14 +71,15 @@ function isSupabaseReady(): boolean {
   return !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 }
 
-// ── Public API (all async) ────────────────────────────────────
+// ── Public API ────────────────────────────────────────────────
 
 export async function getIndex(): Promise<SessionMeta[]> {
-  if (!isSupabaseReady()) return lsGetIndex();
+  if (!isSupabaseReady() || !_activeUserId) return lsGetIndex();
   try {
     const { data, error } = await supabase
       .from("chat_sessions")
       .select("id, title, created_at, updated_at, messages")
+      .eq("user_id", _activeUserId)
       .order("updated_at", { ascending: false });
     if (error) throw error;
     const sessions = (data || []).map((row: any) => ({
@@ -81,7 +89,6 @@ export async function getIndex(): Promise<SessionMeta[]> {
       updatedAt: row.updated_at,
       messageCount: (row.messages || []).length,
     }));
-    // Update local cache
     lsSetIndex(sessions);
     return sessions;
   } catch (e) {
@@ -107,14 +114,14 @@ export async function saveSession(session: ChatSession): Promise<void> {
     updatedAt: new Date().toISOString(),
   };
 
-  // Always write to localStorage cache first (instant)
   lsCacheSession(updated);
 
-  if (!isSupabaseReady()) return;
+  if (!isSupabaseReady() || !_activeUserId) return;
 
   try {
     const { error } = await supabase.from("chat_sessions").upsert({
       id: updated.id,
+      user_id: _activeUserId,
       title: updated.title,
       created_at: updated.createdAt,
       updated_at: updated.updatedAt,
@@ -127,12 +134,13 @@ export async function saveSession(session: ChatSession): Promise<void> {
 }
 
 export async function loadSession(id: string): Promise<ChatSession | null> {
-  if (!isSupabaseReady()) return lsGetSession(id);
+  if (!isSupabaseReady() || !_activeUserId) return lsGetSession(id);
   try {
     const { data, error } = await supabase
       .from("chat_sessions")
       .select("*")
       .eq("id", id)
+      .eq("user_id", _activeUserId)
       .single();
     if (error) throw error;
     const session: ChatSession = {
@@ -142,7 +150,7 @@ export async function loadSession(id: string): Promise<ChatSession | null> {
       updatedAt: data.updated_at,
       messages: data.messages || [],
     };
-    lsCacheSession(session); // keep cache fresh
+    lsCacheSession(session);
     return session;
   } catch (e) {
     console.warn("[ChatStorage] Supabase load failed, trying cache:", e);
@@ -152,23 +160,26 @@ export async function loadSession(id: string): Promise<ChatSession | null> {
 
 export async function deleteSession(id: string): Promise<void> {
   lsRemoveSession(id);
-  if (!isSupabaseReady()) return;
+  if (!isSupabaseReady() || !_activeUserId) return;
   try {
-    const { error } = await supabase.from("chat_sessions").delete().eq("id", id);
+    const { error } = await supabase
+      .from("chat_sessions")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", _activeUserId);
     if (error) throw error;
   } catch (e) {
     console.warn("[ChatStorage] Supabase delete failed:", e);
   }
 }
 
-// ── One-time sync: pull Supabase → localStorage on app load ──
-
 export async function syncFromCloud(): Promise<void> {
-  if (!isSupabaseReady()) return;
+  if (!isSupabaseReady() || !_activeUserId) return;
   try {
     const { data, error } = await supabase
       .from("chat_sessions")
       .select("*")
+      .eq("user_id", _activeUserId)
       .order("updated_at", { ascending: false });
     if (error) throw error;
     (data || []).forEach((row: any) => {
