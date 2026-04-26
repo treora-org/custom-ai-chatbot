@@ -12,7 +12,7 @@ export async function generateChatResponse(messages: Message[]): Promise<{ reply
 
   const systemPrompt = {
     role: "system" as const,
-    content: "You are Eve, an autonomous AI research assistant. You have access to tools: 'search_web' and 'read_webpage'. If you need facts, use 'search_web'. If a search returns a promising URL, you can use 'read_webpage' to read its full content. You can chain these tools before finally answering the user. Be concise."
+    content: "You are Eve, an autonomous AI assistant. You have three tools: 'search_web', 'read_webpage', and 'generate_image'. CRITICAL: Rely on your internal knowledge FIRST. ONLY use 'search_web' if you do not know the answer or if the user asks for real-time/recent information. If the user asks to generate, create, or draw an image, use the 'generate_image' tool with a highly detailed visual prompt. Be concise in your text responses."
   };
 
   const groqMessages: any[] = [
@@ -47,6 +47,23 @@ export async function generateChatResponse(messages: Message[]): Promise<{ reply
           required: ["url"],
         },
       },
+    },
+    {
+      type: "function",
+      function: {
+        name: "generate_image",
+        description: "Generate an image based on a text prompt.",
+        parameters: {
+          type: "object",
+          properties: {
+            prompt: {
+              type: "string",
+              description: "A highly detailed, comma-separated visual description of the image to generate. Include lighting, style, subject, and atmosphere."
+            }
+          },
+          required: ["prompt"],
+        },
+      },
     }
   ];
 
@@ -73,11 +90,28 @@ export async function generateChatResponse(messages: Message[]): Promise<{ reply
     }
 
     const responseMessage = completion.choices[0]?.message;
+    let finalContent = responseMessage?.content ?? "";
+
+    // Intercept Llama 3.1 XML tool hallucinations (catches <function=, function=, unction=, etc)
+    const toolRegex = /function=generate_image>([\s\S]*?)<\/?function>/gi;
+    const match = toolRegex.exec(finalContent);
+    if (match) {
+      try {
+        const jsonArgs = JSON.parse(match[1]);
+        const prompt = jsonArgs.prompt;
+        const encodedPrompt = encodeURIComponent(prompt);
+        const imageUrl = `/api/image?prompt=${encodedPrompt}`;
+
+        finalContent = finalContent.replace(match[0], `\n\n![${prompt}](${imageUrl})\n\n`);
+      } catch (e) {
+        console.error("Failed to parse hallucinated JSON:", e);
+      }
+    }
 
     if (!responseMessage?.tool_calls || responseMessage.tool_calls.length === 0) {
       // AI finished researching and gave a final answer
       return {
-        reply: responseMessage?.content ?? "",
+        reply: finalContent,
         sources
       };
     }
@@ -101,14 +135,20 @@ export async function generateChatResponse(messages: Message[]): Promise<{ reply
       } else if (toolCall.function.name === "read_webpage") {
         console.log("[Agent] Reading:", args.url);
         toolResult = await readWebpage(args.url);
-        
-        // Save the source for the UI if we successfully read it
+
         if (args.url && !sources.find((s) => s.url === args.url)) {
           sources.push({
             url: args.url,
-            title: new URL(args.url).hostname.replace("www.", "") // Fallback title
+            title: new URL(args.url).hostname.replace("www.", "")
           });
         }
+      } else if (toolCall.function.name === "generate_image") {
+        console.log("[Agent] Generating image for:", args.prompt);
+        // We use Pollinations.ai which returns the image directly via URL.
+        // We just need to give the AI the markdown image string so it outputs it.
+        const encodedPrompt = encodeURIComponent(args.prompt);
+        const imageUrl = `/api/image?prompt=${encodedPrompt}`;
+        toolResult = `Image generated successfully. Include this exact markdown in your final response: ![${args.prompt}](${imageUrl})`;
       }
 
       groqMessages.push({

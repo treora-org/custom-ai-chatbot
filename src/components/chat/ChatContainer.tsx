@@ -6,7 +6,7 @@ import { ChatMessage } from "./ChatMessage";
 import { ChatInput } from "./ChatInput";
 import { HistorySidebar } from "./HistorySidebar";
 import { AnimatePresence, motion } from "framer-motion";
-import { Snowflake, Menu, LogOut, ChevronDown } from "lucide-react";
+import { Snowflake, Menu, LogOut, ChevronDown, User } from "lucide-react";
 import { useVoice } from "@/hooks/useVoice";
 import { useSpeech } from "@/hooks/useSpeech";
 import { useAuth } from "@/hooks/useAuth";
@@ -195,8 +195,15 @@ export function ChatContainer() {
                   <p className="text-xs text-zinc-500 truncate mt-0.5">{user?.email}</p>
                 </div>
                 <button
-                  onClick={async () => { setUserMenuOpen(false); await signOut(); window.location.href = "/"; }}
+                  onClick={() => { setUserMenuOpen(false); window.location.href = "/profile"; }}
                   className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
+                >
+                  <User size={14} />
+                  Profile settings
+                </button>
+                <button
+                  onClick={async () => { setUserMenuOpen(false); await signOut(); window.location.href = "/"; }}
+                  className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-zinc-400 hover:text-white hover:bg-white/5 transition-colors border-t border-white/5"
                 >
                   <LogOut size={14} />
                   Sign out

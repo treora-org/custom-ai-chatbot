@@ -80,6 +80,7 @@ export async function getIndex(): Promise<SessionMeta[]> {
       .from("chat_sessions")
       .select("id, title, created_at, updated_at, messages")
       .eq("user_id", _activeUserId)
+      .or("is_deleted.eq.false,is_deleted.is.null")
       .order("updated_at", { ascending: false });
     if (error) throw error;
     const sessions = (data || []).map((row: any) => ({
@@ -141,6 +142,7 @@ export async function loadSession(id: string): Promise<ChatSession | null> {
       .select("*")
       .eq("id", id)
       .eq("user_id", _activeUserId)
+      .or("is_deleted.eq.false,is_deleted.is.null")
       .single();
     if (error) throw error;
     const session: ChatSession = {
@@ -164,7 +166,7 @@ export async function deleteSession(id: string): Promise<void> {
   try {
     const { error } = await supabase
       .from("chat_sessions")
-      .delete()
+      .update({ is_deleted: true })
       .eq("id", id)
       .eq("user_id", _activeUserId);
     if (error) throw error;
@@ -180,6 +182,7 @@ export async function syncFromCloud(): Promise<void> {
       .from("chat_sessions")
       .select("*")
       .eq("user_id", _activeUserId)
+      .or("is_deleted.eq.false,is_deleted.is.null")
       .order("updated_at", { ascending: false });
     if (error) throw error;
     (data || []).forEach((row: any) => {
