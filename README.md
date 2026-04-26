@@ -9,11 +9,13 @@
 
 ### 🧠 AI & Research
 - **Llama 3.1 8B Instant via Groq** — Ultra-fast LPU-powered AI inference for near-instant responses
-- **Autonomous Agent Loop** — Eve autonomously chains `search_web` and `read_webpage` tool calls to research answers before responding (up to 2 iterations on free tier, 4 on Pro)
+- **Autonomous Agent Loop** — Eve autonomously chains `search_web` and `read_webpage` tool calls to research answers before responding
+- **Context-Aware Execution** — The agent prioritizes internal knowledge and only executes web searches when specific facts or current events are required
+- **Hallucination Interceptor** — Robust regex-based interceptor catches and parses Llama 3.1's raw tool outputs, converting them into clean UI components
 - **DuckDuckGo Web Search** — Real-time, privacy-respecting search scraping via Cheerio HTML parsing
 - **Jina Reader Webpage Scraping** — Deep-reads the full text of any URL for richer context
 - **Source Citations** — AI responses include source URLs from pages read during research
-- **AI Image Generation (Hugging Face)** — Eve can generate high-fidelity images using FLUX.1-schnell via an internal secure API proxy
+- **AI Image Generation (Hugging Face)** — Eve generates high-fidelity images using FLUX.1-schnell via an internal secure API proxy
 
 ### 🎙️ Voice Pipeline (Fully Hands-Free)
 - **Always-On Wake Word Detection** — Continuous audio monitoring with wake words: `"Eve"`, `"Hey Eve"`, `"Hi Eve"`, `"Okay Eve"`
@@ -40,6 +42,7 @@
 - **Graceful Degradation** — If Supabase is unavailable, falls back transparently to localStorage
 - **Auto-Sync on Load** — On login, sessions are pulled from Supabase and merged into the local cache
 - **Auto-Title Derivation** — Conversation titles auto-generated from the first user message
+- **Soft Deletion** — History sessions are "soft-deleted" (`is_deleted: true`) to ensure data integrity and allow for future recovery
 - **History Sidebar** — Slide-in panel showing all past sessions with timestamps and message counts; supports session switching and deletion
 
 ### 🎨 UI & Design
@@ -48,6 +51,7 @@
 - **3D Tilt Cards** — Mouse-tracking perspective transforms (`perspective`, `rotateX/Y`) on all feature and auth cards
 - **3D Vortex Canvas Background** — High-performance animated particle system using `simplex-noise` in the chat view
 - **Framer Motion Animations** — Smooth enter/exit animations on messages, UI states, and auth form fields
+- **Animated Image Loading** — Custom sparkle and spinner animations for image generation states, with graceful error handling
 - **SpotlightCard** — ReactBits cursor-tracking glow on interactive elements
 - **Sticky Fixed Header** — Hamburger menu and user pill remain fixed regardless of scroll
 - **User Menu Dropdown** — Shows display name, email, and sign-out button in top-right corner

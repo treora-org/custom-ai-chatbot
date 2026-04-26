@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -111,7 +111,7 @@ function AuthInput({
 }
 
 // ─── Main Auth Page ────────────────────────────────────────────
-export default function AuthPage() {
+function AuthForm() {
   const searchParams = useSearchParams();
   const [mode, setMode] = useState<"signin" | "signup">(searchParams.get("mode") === "signup" ? "signup" : "signin");
   const [name, setName] = useState("");
@@ -273,5 +273,17 @@ export default function AuthPage() {
         Your research. Your history. Secured by Supabase.
       </p>
     </main>
+  );
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <Loader2 size={32} className="animate-spin text-zinc-800" />
+      </div>
+    }>
+      <AuthForm />
+    </Suspense>
   );
 }
