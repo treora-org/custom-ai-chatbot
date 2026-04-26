@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@huggingface/inference": "^4.13.15",
     "@react-spring/web": "^10.0.3",
     "@supabase/supabase-js": "^2.104.1",
     "cheerio": "^1.2.0",
